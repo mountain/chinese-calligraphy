@@ -1,4 +1,4 @@
-# examples/handscroll_ailianshuo.py
+# examples/handscroll.py
 
 from chinese_calligraphy import (
     Style, Brush, ScrollCanvas, Margins, SegmentSpec,
@@ -68,7 +68,7 @@ def main():
         tail_space=780,
     )
 
-    scroll.save("handscroll_ailianshuo.png")
+    scroll.save("handscroll.png")
 
 if __name__ == "__main__":
     main()
