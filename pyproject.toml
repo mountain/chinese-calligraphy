@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "chinese-calligraphy"
-version = "0.1.0"
+version = "0.1.1"
 description = "A Pythonic interface for generating Chinese calligraphy works"
 readme = "README.md"
 requires-python = ">=3.10"
