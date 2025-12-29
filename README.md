@@ -2,7 +2,7 @@
 
 A Pythonic interface for composing and rendering traditional Chinese calligraphy works using Pillow. Model whole works like handscrolls with title, main text, colophon, and seals; tune style and brush behavior for organic variation.
 
-![Preview handscroll](https://raw.githubusercontent.com/mountain/calligraphy/main/handscroll_small.png)
+![Preview handscroll](https://raw.githubusercontent.com/mountain/chinese-calligraphy/main/handscroll_small.png)
 
 - Components: Title, MainText, Colophon, Seal
 - Layout: handscroll canvas, margins, segmentation (columns per segment + inter-segment gap)

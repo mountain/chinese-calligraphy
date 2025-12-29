@@ -39,9 +39,9 @@ fonttools = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/mountain/calligraphy"
-Repository = "https://github.com/mountain/calligraphy"
-Issues = "https://github.com/mountain/calligraphy/issues"
+Homepage = "https://github.com/mountain/chinese-calligraphy"
+Repository = "https://github.com/mountain/chinese-calligraphy"
+Issues = "https://github.com/mountain/chinese-calligraphy/issues"
 
 [tool.hatch.build.targets.sdist]
 # Include everything by default (README, LICENSE, images, examples)
