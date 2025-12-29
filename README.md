@@ -1,6 +1,6 @@
 # Chinese Calligraphy (Python API)
 
-A Pythonic interface for composing and rendering traditional Chinese calligraphy works using Pillow. Model whole works like handscrolls with title, main text, colophon, and seals; tune style and brush behavior for organic variation.
+A Pythonic interface for composing and rendering traditional Chinese calligraphy works using Pillow. Model whole works like handscrolls and vertical couplets (with optional horizontal header) with title, main text, colophon, and seals; tune style and brush behavior for organic variation.
 
 ![Preview handscroll](https://raw.githubusercontent.com/mountain/chinese-calligraphy/main/handscroll_small.png)
 
@@ -99,6 +99,38 @@ scroll.save("handscroll.png")
 
 This produces an image like the preview above.
 
+Or render a couplet preview:
+
+```python
+from chinese_calligraphy import Style, Brush, Couplet, Seal
+from chinese_calligraphy.font import find_font_path, require_font_path
+
+# Choose fonts on your system
+font_path = require_font_path("FZWangDXCJF")
+seal_font = find_font_path("FZZJ-MZFU") or font_path
+
+style = Style(font_path=font_path, font_size=220, color=(20, 20, 20), char_spacing=10, col_spacing=200)
+brush = Brush(seed=2025, char_jitter=(3, 3), var_scale=0.08, var_rotate_deg=1.5)
+
+couplet = Couplet(
+    text_right="一肩風雪吟詩苦",
+    text_left="滿紙冰霜入骨清",
+    text_header="自甘其寒",
+    colophon_right="乙巳新春試筆",
+    colophon_left="博德書於靈境山房",
+    style=style,
+    brush=brush,
+    width=600,
+    height=2400,
+    header_height=400,
+    seal_left=Seal(font_path=seal_font, text_grid=[("博",0,0),("德",0,1)], size=100, color=(140,30,30))
+)
+
+couplet.save_preview("couplet.png")
+```
+
+This writes a white-background preview image that lays out the left/right scrolls and optional header together as couplet.png.
+
 
 ## API overview
 
@@ -136,6 +168,13 @@ This produces an image like the preview above.
   - lead_seal/name_seal: Seal | None; lead_space/tail_space
   - measure_width() -> total width; render() -> PIL.Image; save(path); save_preview(path, segment_index, preview_width)
 
+- chinese_calligraphy.works.Couplet
+  - text_right, text_left, text_header=None; colophon_right=None, colophon_left=None
+  - style: Style (required); brush: Brush (optional)
+  - width, height; header_height; header_width=None; margins; bg_color
+  - seal_right/left/header: Seal | None
+  - render() -> (Image right, Image left, Optional[Image header]); save(prefix) -> writes prefix_right.png/prefix_left.png/[prefix_header.png]; save_preview(path, gap=50)
+
 Convenience facade imports are exposed at the package top-level for the classes above.
 
 
@@ -155,13 +194,23 @@ It scans common OS font directories and can optionally use fontTools to match na
 
 ## Examples
 
-A full example is available in examples/handscroll.py in the repository. When installing from PyPI, examples are not included in the wheel; clone the repo to run them locally.
+Full examples are available in the repository under examples/. When installing from PyPI, examples are not included in the wheel; clone the repo to run them locally.
+
+Handscroll:
 
 ```bash
 python examples/handscroll.py
 ```
 
-The script writes handscroll.png to the current directory.
+Generates handscroll.png.
+
+Couplet:
+
+```bash
+python examples/couplet.py
+```
+
+Generates couplet.png (a preview sheet with header and the two vertical scrolls). To export individual scroll images instead, call couplet.save("couplet") which writes couplet_right.png, couplet_left.png, and optionally couplet_header.png.
 
 
 ## Compatibility
