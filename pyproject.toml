@@ -1,0 +1,9 @@
+[project]
+name = "chinese-calligraphy"
+version = "0.1.0"
+description = "A Pythonic interface for generating Chinese calligraphy works"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "Pillow>=12.0.0",
+]
