@@ -1,7 +1,7 @@
 # chinese_calligraphy/works/couplet.py
 
-# 【繁】對聯作品容器：包含上聯、下聯與橫批，修正居中算法
-# [EN] Couplet work container: Fix centering logic based on column axis
+# 【繁】對聯作品容器：增加垂直自動居中與視覺重心修正
+# [EN] Couplet work container: Add vertical auto-centering and visual center correction
 
 from __future__ import annotations
 
@@ -18,7 +18,8 @@ from ..style import Style
 
 @dataclass
 class Couplet:
-    # 内容
+    # 【繁】內容
+    # [EN] Content
     text_right: str
     text_left: str
     text_header: Optional[str] = None
@@ -26,11 +27,13 @@ class Couplet:
     colophon_right: Optional[str] = None
     colophon_left: Optional[str] = None
 
-    # 风格
+    # 【繁】風格
+    # [EN] Style
     style: Optional[Style] = None
     brush: Brush = field(default_factory=Brush)
 
-    # 尺寸
+    # 【繁】尺寸
+    # [EN] Dimensions
     width: int = 500
     height: int = 2000
 
@@ -48,18 +51,52 @@ class Couplet:
         if self.style is None:
             raise ValueError("Style must be provided")
 
+    def _get_visual_center_y(self, container_h: int, content_h: int) -> int:
+        """
+        【繁】計算視覺垂直居中的起始點 Y
+        [EN] Calculate the starting Y for visual vertical centering
+
+        Note:
+        【繁】幾何中心是 (container_h - content_h) // 2。但在書法裱畫中，視覺中心通常偏上（約 45% 處），否則會覺得字「掉」下去了。我們將中心點向上提 15% 的餘量。
+        [EN] The geometric center is (container_h - content_h) // 2. However, in calligraphy mounting, the visual center is usually higher (around 45%), otherwise the text feels like it's "falling". We raise the center point by a 15% margin.
+        """
+        geometric_center_start = (container_h - content_h) // 2
+        visual_correction = int(geometric_center_start * 0.15)  # 【繁】向上提 15% 的空白距離 [EN] Raise by 15% blank distance
+        return geometric_center_start - visual_correction
+
     def _render_vertical(self, text: str, colophon_text: Optional[str], seal: Optional[Seal]) -> Image.Image:
         """
-        【繁】渲染單幅直聯（修正版：幾何絕對居中）
-        [EN] Render single vertical scroll (Fixed: Absolute geometric centering)
+        【繁】渲染單幅直聯（垂直自動居中 + 視覺修正）
+        [EN] Render a single vertical scroll (vertical auto-centering + visual correction)
         """
         canvas = ScrollCanvas(height=self.height, bg=self.bg_color)
         img = canvas.new_image(self.width)
         draw = ImageDraw.Draw(img)
 
-        content_h = self.height - self.margins.top - self.margins.bottom
+        # 1. 【繁】計算正文的實際垂直高度
+        #    [EN] Calculate the actual vertical height of the main text
+        # 【繁】MainText 中，高度 ≈ (字數 - 1) * step_y。因為這裡是單列，我們直接算：
+        # [EN] In MainText, height ≈ (num_chars - 1) * step_y. Since this is a single column, we calculate directly:
+        num_chars = len(text)
 
-        # 1. 準備正文
+        # 【繁】內容跨度：從第一個字中心到最後一個字中心的距離
+        # [EN] Content span: distance from the center of the first character to the center of the last character
+        text_span_y = (num_chars - 1) * self.style.step_y
+
+        # 2. 【繁】計算起始 Y (第一個字的中心位置)
+        #    [EN] Calculate start Y (center position of the first character)
+        # 【繁】使用視覺修正算法，而不是固定的 margins.top
+        # [EN] Use visual correction algorithm instead of fixed margins.top
+        # 【繁】這裡 content_h 我們視為 text_span_y (雖然字本身有高度，但 Brush 以中心定位，這樣計算是對稱的)
+        # [EN] Here we treat content_h as text_span_y (although chars have height, Brush uses center positioning, so this calculation is symmetric)
+        y_start_main = self._get_visual_center_y(self.height, text_span_y)
+
+        # 【繁】保底：不要高於 margins.top (防止字太大衝出邊界)
+        # [EN] Safeguard: do not go higher than margins.top (prevent text from overflowing the boundary)
+        y_start_main = max(self.margins.top, y_start_main)
+
+        # 3. 【繁】準備正文對象
+        #    [EN] Prepare MainText object
         main = MainText(
             text=text,
             style=self.style,
@@ -67,34 +104,35 @@ class Couplet:
             segment=SegmentSpec(columns_per_segment=1, segment_gap=0)
         )
 
-        # 【核心修正】：計算到底有幾列（通常對聯為1列，但也可能因為字多變2列）
-        cols = main._columns(content_h)
+        # 4. 【繁】計算水平居中 X
+        #    [EN] Calculate horizontal centering X
+        # 【繁】MainText.width() 用於計算寬度，這裡近似為 font_size
+        # [EN] MainText.width() is used to calculate width, approximated here as font_size
+        # 【繁】content_height 傳入 self.height 即可，因為我們已經手動控製了 y_start
+        # [EN] Pass self.height for content_height, as we have manually controlled y_start
+        cols = main._columns(self.height)
         num_cols = len(cols)
-
-        # 計算「列群」的總跨度（第一列軸線到最後一列軸線的距離）
-        # span = (n-1) * spacing
         block_axis_span = (num_cols - 1) * self.style.col_spacing
-
-        # 2. 計算起始 X (最右側一列的軸線位置)
-        # 邏輯：紙張中心 + (總跨度的一半)
-        # 如果只有1列，span=0，x_start 直接等於 center。這就完美居中了。
         paper_center_x = self.width // 2
         x_start_main = paper_center_x + (block_axis_span // 2)
 
-        # 繪製正文
-        final_x_main = main.draw(img, draw, x_start_main, self.margins.top, content_h)
+        # 5. 【繁】繪製正文
+        #    [EN] Draw main text
+        # 【繁】注意：content_height 參數在 draw 裡主要用於切分列。因為我們已經強制單列且手動計算了 Y，這裡傳入剩餘高度即可
+        # [EN] Note: content_height in draw is mainly used for column splitting. Since we forced a single column and manually calculated Y, passing remaining height is fine
+        final_x_main = main.draw(img, draw, x_start_main, y_start_main, self.height)
 
-        # 3. 處理落款 (Colophon)
-        # 落款依附於正文的「左邊緣」。
-        # 我們需要估算正文最左側一列的視覺邊緣。
-        # 正文最左側軸線 = x_start_main - block_axis_span
-        # 視覺左邊緣 ≈ 最左軸線 - (font_size / 2)
-
+        # 6. 【繁】處理落款
+        #    [EN] Handle colophon
         visual_left_edge = (x_start_main - block_axis_span) - (self.style.font_size // 2)
 
-        # 默認印章位置（無落款時，居中於正文最左列下方）
+        # 【繁】默認印章位置
+        # [EN] Default seal position
         seal_x = (x_start_main - block_axis_span) - (seal.size // 2 if seal else 0)
-        seal_y = self.height - self.margins.bottom - (seal.size if seal else 100)
+
+        # 【繁】印章跟隨正文結束位置
+        # [EN] Seal follows the end position of the main text
+        seal_y = y_start_main + text_span_y + self.style.font_size + 50
 
         if colophon_text:
             sig_style = Style(
@@ -110,21 +148,21 @@ class Couplet:
                 brush=self.brush
             )
 
-            # 落款位置：在正文視覺左邊緣，再往左空一點間隙
             gap = int(self.style.font_size * 0.8)
             x_col = visual_left_edge - gap
 
-            # 落款高度：比正文起始略低，更有層次
-            y_col = self.margins.top + self.style.font_size * 2
+            # 【繁】【重要】落款起始高度改為「相對於正文起始點」
+            # [EN] [Important] Colophon start height changed to be "relative to main text start point"
+            # 【繁】讓落款的第一個字，對齊正文的第二個字左右，顯得謙卑
+            # [EN] Align the first char of colophon roughly with the second char of main text, appearing humble
+            y_col = y_start_main + self.style.font_size * 1.5
 
             end_x_col, end_y_col = colophon_obj.draw(draw, x_col, y_col)
 
-            # 有落款時，印章蓋在落款下面
             if seal:
                 seal_x = end_x_col - (seal.size - sig_style.font_size) // 2
                 seal_y = end_y_col + 30
 
-        # 4. 繪製印章
         if seal:
             seal.draw(draw, (int(seal_x), int(seal_y)))
 
@@ -132,7 +170,8 @@ class Couplet:
 
     def _render_header(self) -> Optional[Image.Image]:
         """
-        【繁】渲染橫批（修正版：水平幾何居中）
+        【繁】渲染橫批（視覺垂直居中）
+        [EN] Render header (visual vertical centering)
         """
         if not self.text_header:
             return None
@@ -144,7 +183,11 @@ class Couplet:
         draw = ImageDraw.Draw(img)
 
         one_char_h = self.style.step_y + 10
-        top_margin = (h - self.style.font_size) // 2
+
+        # 【繁】【視覺修正】幾何中軸是 h // 2。我們稍微向上提一點點（如 10% 的半高），讓字看起來更精神
+        # [EN] [Visual Correction] Geometric axis is h // 2. We raise it slightly (e.g., 10% of half height) to make the text look more energetic
+        visual_shift = int((h // 2) * 0.1)
+        y_center_axis = (h // 2) - visual_shift
 
         main = MainText(
             text=self.text_header,
@@ -153,18 +196,14 @@ class Couplet:
             segment=SegmentSpec(columns_per_segment=1, segment_gap=0)
         )
 
-        # 計算字數與跨度
-        # 橫批其實是被切成了 N 列，每列 1 字
-        cols = main._columns(one_char_h)  # 這裡會把每個字切成一列
+        cols = main._columns(one_char_h)
         num_chars = len(cols)
-
         block_span = (num_chars - 1) * self.style.col_spacing
 
         x_center = w // 2
-        # 右起橫排：第一字（最右）的軸線 = 中心 + 總跨度一半
         x_right_start = x_center + (block_span // 2)
 
-        main.draw(img, draw, x_right_start, top_margin, one_char_h)
+        main.draw(img, draw, x_right_start, y_center_axis, one_char_h)
 
         if self.seal_header:
             sx = self.margins.left
@@ -188,8 +227,6 @@ class Couplet:
 
     def save_preview(self, path: str, gap: int = 50) -> None:
         r, l, h = self.render()
-
-        # 计算总画布尺寸
         w_total = r.width + l.width + gap * 4
         if h:
             w_total = max(w_total, h.width + gap * 2)
@@ -197,24 +234,18 @@ class Couplet:
         h_total = h_header + gap + max(r.height, l.height) + gap
 
         preview = Image.new("RGB", (w_total, h_total), (255, 255, 255))
-
-        # 1. 贴横批（居中）
         current_y = gap
         if h:
             x_h = (w_total - h.width) // 2
             preview.paste(h, (x_h, current_y))
             current_y += h.height + gap
 
-        # 2. 贴对联（传统布局：右为上，左为下）
-        # 观众视角： [下联 (Left Text)]  <-- gap -->  [上联 (Right Text)]
-
         pair_w = l.width + gap + r.width
         x_start = (w_total - pair_w) // 2
 
-        # 先贴左边的位置（放置下联 l）
+        # 【繁】左側放左聯（下聯），右側放右聯（上聯），符合展示習慣
+        # [EN] Place left scroll (bottom couplet) on the left, right scroll (top couplet) on the right, matching display convention
         preview.paste(l, (x_start, current_y))
-
-        # 再贴右边的位置（放置上联 r）
         preview.paste(r, (x_start + l.width + gap, current_y))
 
         preview.save(path)
