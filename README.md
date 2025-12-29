@@ -1,11 +1,11 @@
 # Chinese Calligraphy (Python API)
 
-A Pythonic interface for composing and rendering traditional Chinese calligraphy works using Pillow. Model whole works like handscrolls and vertical couplets (with optional horizontal header) with title, main text, colophon, and seals; tune style and brush behavior for organic variation.
+A Pythonic interface for composing and rendering traditional Chinese calligraphy works using Pillow. Model whole works like handscrolls, vertical couplets (with optional horizontal header), and folding fans, with title, main text, colophon, and seals; tune style and brush behavior for organic variation.
 
 ![Preview handscroll](https://raw.githubusercontent.com/mountain/chinese-calligraphy/main/handscroll_small.png)
 
 - Components: Title, MainText, Colophon, Seal
-- Layout: handscroll canvas, margins, segmentation (columns per segment + inter-segment gap)
+- Layout: handscroll canvas, couplet sheet, fan radial layout; margins, segmentation (columns per segment + inter-segment gap)
 - Style: choose font, size, color, inter-character and inter-column spacing
 - Brush dynamics: character jitter, segment drift, column inertial drift, contextual micro-variation, and a 3-state model for the character “之”
 - Font discovery helper to locate installed fonts by family/name across macOS/Windows/Linux
@@ -131,6 +131,44 @@ couplet.save_preview("couplet.png")
 
 This writes a white-background preview image that lays out the left/right scrolls and optional header together as couplet.png.
 
+Or render a folding fan:
+
+```python
+from chinese_calligraphy import Style, Brush, Fan
+from chinese_calligraphy.font import require_font_path
+
+# Choose a Chinese font available on your system
+font_path = require_font_path("FZWangDXCJF")
+
+# Main text and colophon (the colophon style is auto-derived if not provided)
+text = "人閑桂花落夜靜春山空月出驚山鳥時鳴春澗中"
+colophon = "乙巳仲冬錄摩詰詩於靈境山房"
+
+style = Style(
+    font_path=font_path,
+    font_size=120,
+    color=(20, 20, 20),
+    char_spacing=10,
+    # In Fan, col_spacing controls angular step between columns
+    col_spacing=220
+)
+brush = Brush(seed=2025, char_jitter=(2, 2), var_rotate_deg=1.2, var_scale=0.06)
+
+fan = Fan(
+    text=text,
+    colophon=colophon,
+    style=style,
+    brush=brush,
+    width=2400,
+    height=1400,
+    angle_span=130,
+)
+
+fan.save("fan.png")
+```
+
+This writes a curved fan-face composition as fan.png. The colophon is rendered with a slightly smaller, auto-generated style unless you provide colophon_style explicitly.
+
 
 ## API overview
 
@@ -175,6 +213,15 @@ This writes a white-background preview image that lays out the left/right scroll
   - seal_right/left/header: Seal | None
   - render() -> (Image right, Image left, Optional[Image header]); save(prefix) -> writes prefix_right.png/prefix_left.png/[prefix_header.png]; save_preview(path, gap=50)
 
+- chinese_calligraphy.works.Fan
+  - text, colophon=None
+  - style: Style (required); colophon_style: Style | None (auto-derived ~55% size if omitted)
+  - brush: Brush (optional)
+  - width, height; center_x, center_y
+  - radius_outer, radius_inner; angle_span
+  - bg_color
+  - render() -> PIL.Image; save(path)
+
 Convenience facade imports are exposed at the package top-level for the classes above.
 
 
@@ -211,6 +258,14 @@ python examples/couplet.py
 ```
 
 Generates couplet.png (a preview sheet with header and the two vertical scrolls). To export individual scroll images instead, call couplet.save("couplet") which writes couplet_right.png, couplet_left.png, and optionally couplet_header.png.
+
+Fan:
+
+```bash
+python examples/fan.py
+```
+
+Generates fan.png.
 
 
 ## Compatibility
