@@ -10,6 +10,7 @@ from .layout import ScrollCanvas, SegmentSpec, Margins
 from .elements import Title, MainText, Colophon, Seal
 from .works.handscroll import Handscroll
 from .works.couplet import Couplet
+from .works.fan import Fan
 
 __all__ = [
     "Color", "Point", "VariantTemplate",
@@ -18,4 +19,5 @@ __all__ = [
     "Title", "MainText", "Colophon", "Seal",
     "Handscroll",
     "Couplet",
+    "Fan",
 ]
