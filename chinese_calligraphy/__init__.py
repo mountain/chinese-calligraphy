@@ -9,6 +9,7 @@ from .brush import Brush
 from .layout import ScrollCanvas, SegmentSpec, Margins
 from .elements import Title, MainText, Colophon, Seal
 from .works.handscroll import Handscroll
+from .works.couplet import Couplet
 
 __all__ = [
     "Color", "Point", "VariantTemplate",
@@ -16,4 +17,5 @@ __all__ = [
     "ScrollCanvas", "SegmentSpec", "Margins",
     "Title", "MainText", "Colophon", "Seal",
     "Handscroll",
+    "Couplet",
 ]
