@@ -1,9 +1,59 @@
+[build-system]
+requires = ["hatchling>=1.26"]
+build-backend = "hatchling.build"
+
 [project]
 name = "chinese-calligraphy"
 version = "0.1.0"
 description = "A Pythonic interface for generating Chinese calligraphy works"
 readme = "README.md"
-requires-python = ">=3.14"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+authors = [
+  { name = "Mingli Yuan" }
+]
+keywords = ["calligraphy", "chinese", "graphics", "pillow", "typography", "art"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Education",
+  "Topic :: Multimedia :: Graphics",
+  "Topic :: Artistic Software",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Operating System :: OS Independent",
+]
 dependencies = [
-    "Pillow>=12.0.0",
+  "Pillow>=10.0.0",
+]
+
+[project.optional-dependencies]
+fonttools = [
+  "fonttools>=4.0.0"
+]
+
+[project.urls]
+Homepage = "https://github.com/mountain/calligraphy"
+Repository = "https://github.com/mountain/calligraphy"
+Issues = "https://github.com/mountain/calligraphy/issues"
+
+[tool.hatch.build.targets.sdist]
+# Include everything by default (README, LICENSE, images, examples)
+
+[tool.hatch.build.targets.wheel]
+# Include only the package itself in the wheel; exclude dev assets
+packages = [
+  "chinese_calligraphy",
+]
+exclude = [
+  "examples",
+  "fonts.txt",
+  "handscroll.png",
+  "handscroll_small.png",
 ]
