@@ -1,14 +1,22 @@
 # examples/handscroll.py
 
 from chinese_calligraphy import (
-    Style, Brush, ScrollCanvas, Margins, SegmentSpec,
-    Title, MainText, Colophon, Seal, Handscroll
+    Brush,
+    Colophon,
+    Handscroll,
+    MainText,
+    Margins,
+    ScrollCanvas,
+    Seal,
+    SegmentSpec,
+    Style,
+    Title,
 )
 from chinese_calligraphy.font import require_font_path
 
 
-def main():
-    FONT_PATH = require_font_path("FZWangDXCJF")     # 正文字体名
+def main() -> None:
+    FONT_PATH = require_font_path("FZWangDXCJF")  # 正文字体名
     SEAL_FONT_PATH = require_font_path("FZZJ-MZFU")  # 印章字体名
 
     TITLE_TEXT = "愛蓮說"
@@ -23,8 +31,8 @@ def main():
     margins = Margins(top=200, bottom=200, right=250, left=250)
 
     title_style = Style(font_path=FONT_PATH, font_size=132, color=(20, 20, 20), char_spacing=15, col_spacing=240)
-    main_style  = Style(font_path=FONT_PATH, font_size=110, color=(20, 20, 20), char_spacing=10, col_spacing=160)
-    sig_style   = Style(font_path=FONT_PATH, font_size=66,  color=(60, 60, 60), char_spacing=5,  col_spacing=160)
+    main_style = Style(font_path=FONT_PATH, font_size=110, color=(20, 20, 20), char_spacing=10, col_spacing=160)
+    sig_style = Style(font_path=FONT_PATH, font_size=66, color=(60, 60, 60), char_spacing=5, col_spacing=160)
 
     title = Title(
         text=TITLE_TEXT,
@@ -69,6 +77,7 @@ def main():
     )
 
     scroll.save("handscroll.png")
+
 
 if __name__ == "__main__":
     main()

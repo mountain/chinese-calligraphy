@@ -6,20 +6,19 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import List, Optional, Tuple
 
 from PIL import Image, ImageDraw, ImageFont
 
-from .types import Color, Point
-from .style import Style
 from .brush import Brush
 from .layout import SegmentSpec
-from .utils import strip_newlines, chunk, floor_int
-
+from .style import Style
+from .types import Color, Point
+from .utils import chunk, floor_int, strip_newlines
 
 # =========================
 # 【引首題 / Title】
 # =========================
+
 
 @dataclass
 class Title:
@@ -57,6 +56,7 @@ class Title:
 # 【正文 / Main text】
 # =========================
 
+
 @dataclass
 class MainText:
     # 【繁】正文：按列高切列，再按段落打包（手卷右起左行）
@@ -67,21 +67,23 @@ class MainText:
 
     # 【繁】筆觸模型（含「之」三態、慣性漂移等）
     # [EN] Brush model (incl. 3-state '之' + inertial drift, etc.)
-    brush: Brush = field(default_factory=lambda: Brush(
-        seed=2,
-        char_jitter=(1, 1),
-        segment_drift=(10, 10),
-        col_drift_step=(0, 10),
-        col_drift_max=(0, 36),
-        col_drift_damping=0.85,
-        var_rotate_deg=1.2,
-        var_shear_x=0.06,
-        var_scale=0.03,
-    ))
+    brush: Brush = field(
+        default_factory=lambda: Brush(
+            seed=2,
+            char_jitter=(1, 1),
+            segment_drift=(10, 10),
+            col_drift_step=(0, 10),
+            col_drift_max=(0, 36),
+            col_drift_damping=0.85,
+            var_rotate_deg=1.2,
+            var_shear_x=0.06,
+            var_scale=0.03,
+        )
+    )
 
     # 【繁】可選：手動指定每列字數（覆蓋自動計算）
     # [EN] Optional: override characters per column
-    chars_per_col: Optional[int] = None
+    chars_per_col: int | None = None
 
     def _chars_per_col(self, content_height: int) -> int:
         # 【繁】每列可容納字數（或使用手動指定）
@@ -90,7 +92,7 @@ class MainText:
             return max(1, int(self.chars_per_col))
         return max(1, floor_int(content_height / self.style.step_y))
 
-    def _columns(self, content_height: int) -> List[str]:
+    def _columns(self, content_height: int) -> list[str]:
         # 【繁】將全文轉字流，再按列字數切成多列
         # [EN] Convert to stream, then chunk into columns
         stream = strip_newlines(self.text)
@@ -126,7 +128,7 @@ class MainText:
         x_right = x_right_start
 
         for seg_i in range(0, len(cols), cols_per_seg):
-            seg_cols = cols[seg_i: seg_i + cols_per_seg]
+            seg_cols = cols[seg_i : seg_i + cols_per_seg]
             seg_idx = seg_i // cols_per_seg
 
             # 【繁】段級偏移（一次）
@@ -165,8 +167,8 @@ class MainText:
                         # [EN] Tiny noise to avoid template feel
                         rot += r.uniform(-0.35, 0.35)
                         shear_x += r.uniform(-0.010, 0.010)
-                        scale *= (1.0 + r.uniform(-0.006, 0.006))
-                        anis_y *= (1.0 + r.uniform(-0.010, 0.010))
+                        scale *= 1.0 + r.uniform(-0.006, 0.006)
+                        anis_y *= 1.0 + r.uniform(-0.010, 0.010)
                     else:
                         rot, shear_x, scale = self.brush.glyph_transform_params(
                             r=r,
@@ -206,6 +208,7 @@ class MainText:
 # 【款識 / Colophon】
 # =========================
 
+
 @dataclass
 class Colophon:
     # 【繁】款識（默認一列小字）
@@ -219,7 +222,7 @@ class Colophon:
         # [EN] Estimated width: reserve about two column widths
         return floor_int(self.style.col_spacing * 2.0)
 
-    def draw(self, draw: ImageDraw.ImageDraw, x_right: int, y_top: int) -> Tuple[int, int]:
+    def draw(self, draw: ImageDraw.ImageDraw, x_right: int, y_top: int) -> tuple[int, int]:
         # 【繁】繪製款識並回傳末尾位置（便於放名章）
         # [EN] Draw colophon and return end position for placing the name seal
         font = self.style.font()
@@ -239,6 +242,7 @@ class Colophon:
 # 【印章 / Seal】
 # =========================
 
+
 @dataclass
 class Seal:
     # 【繁】印章（v0：方印 + 2x2 排列印文）
@@ -250,7 +254,7 @@ class Seal:
     border_width: int = 8
     padding: int = 10
     cell: int = 45
-    text_grid: List[Tuple[str, int, int]] = field(default_factory=list)  # (char, row, col)
+    text_grid: list[tuple[str, int, int]] = field(default_factory=list)  # (char, row, col)
 
     def draw(self, draw: ImageDraw.ImageDraw, origin: Point) -> None:
         # 【繁】在 origin 畫印：先框，再印文

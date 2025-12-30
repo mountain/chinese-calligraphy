@@ -1,12 +1,10 @@
 # examples/couplet.py
 
-from chinese_calligraphy import (
-    Style, Brush, Couplet, Seal
-)
+from chinese_calligraphy import Brush, Couplet, Seal, Style
 from chinese_calligraphy.font import find_font_path, require_font_path
 
 
-def main():
+def main() -> None:
     font_name = "FZWangDXCJF"
     if not find_font_path(font_name):
         font_name = "KaiTi"
@@ -30,14 +28,14 @@ def main():
         font_size=220,  # 字号加大
         color=(20, 20, 20),
         char_spacing=10,  # 字距紧凑更有气势
-        col_spacing=200
+        col_spacing=200,
     )
 
     brush = Brush(
         seed=2025,
         char_jitter=(3, 3),  # 稍微增加一点抖动
         var_scale=0.08,  # 增加大小变化，让字不那么死板
-        var_rotate_deg=1.5
+        var_rotate_deg=1.5,
     )
 
     # 印章
@@ -56,7 +54,7 @@ def main():
         width=600,  # 纸张变窄，聚焦视觉
         height=2400,
         header_height=400,
-        seal_left=seal  # 印章通常盖在下联落款后
+        seal_left=seal,  # 印章通常盖在下联落款后
     )
 
     print("Generating corrected couplet...")

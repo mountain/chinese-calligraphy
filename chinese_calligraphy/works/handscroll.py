@@ -6,12 +6,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Optional
 
 from PIL import Image, ImageDraw
 
+from ..elements import Colophon, MainText, Seal, Title
 from ..layout import Margins, ScrollCanvas
-from ..elements import Title, MainText, Colophon, Seal
 
 
 @dataclass
@@ -21,12 +20,12 @@ class Handscroll:
     canvas: ScrollCanvas
     margins: Margins = field(default_factory=Margins)
 
-    title: Optional[Title] = None
-    main: Optional[MainText] = None
-    colophon: Optional[Colophon] = None
+    title: Title | None = None
+    main: MainText | None = None
+    colophon: Colophon | None = None
 
-    lead_seal: Optional[Seal] = None   # 引首章 / lead seal (optional)
-    name_seal: Optional[Seal] = None   # 名章 / name seal (optional)
+    lead_seal: Seal | None = None  # 引首章 / lead seal (optional)
+    name_seal: Seal | None = None  # 名章 / name seal (optional)
 
     # 【繁】引首/拖尾留白：決定“卷”的呼吸
     # [EN] Lead/tail blank spaces: breathing of the scroll

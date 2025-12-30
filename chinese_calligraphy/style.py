@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+
 from PIL import ImageFont
 
 from .types import Color

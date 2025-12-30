@@ -6,13 +6,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Optional, Tuple
 
 from PIL import Image, ImageDraw
 
-from ..layout import Margins, ScrollCanvas, SegmentSpec
-from ..elements import MainText, Seal, Colophon
 from ..brush import Brush
+from ..elements import Colophon, MainText, Seal
+from ..layout import Margins, ScrollCanvas, SegmentSpec
 from ..style import Style
 
 
@@ -22,14 +21,14 @@ class Couplet:
     # [EN] Content
     text_right: str
     text_left: str
-    text_header: Optional[str] = None
+    text_header: str | None = None
 
-    colophon_right: Optional[str] = None
-    colophon_left: Optional[str] = None
+    colophon_right: str | None = None
+    colophon_left: str | None = None
 
     # 【繁】風格
     # [EN] Style
-    style: Optional[Style] = None
+    style: Style | None = None
     brush: Brush = field(default_factory=Brush)
 
     # 【繁】尺寸
@@ -38,16 +37,16 @@ class Couplet:
     height: int = 2000
 
     header_height: int = 450
-    header_width: Optional[int] = None
+    header_width: int | None = None
 
     margins: Margins = field(default_factory=lambda: Margins(top=200, bottom=200, right=50, left=50))
-    bg_color: Tuple[int, int, int] = (160, 40, 40)
+    bg_color: tuple[int, int, int] = (160, 40, 40)
 
-    seal_right: Optional[Seal] = None
-    seal_left: Optional[Seal] = None
-    seal_header: Optional[Seal] = None
+    seal_right: Seal | None = None
+    seal_left: Seal | None = None
+    seal_header: Seal | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.style is None:
             raise ValueError("Style must be provided")
 
@@ -61,14 +60,17 @@ class Couplet:
         [EN] The geometric center is (container_h - content_h) // 2. However, in calligraphy mounting, the visual center is usually higher (around 45%), otherwise the text feels like it's "falling". We raise the center point by a 15% margin.
         """
         geometric_center_start = (container_h - content_h) // 2
-        visual_correction = int(geometric_center_start * 0.15)  # 【繁】向上提 15% 的空白距離 [EN] Raise by 15% blank distance
+        visual_correction = int(
+            geometric_center_start * 0.15
+        )  # 【繁】向上提 15% 的空白距離 [EN] Raise by 15% blank distance
         return geometric_center_start - visual_correction
 
-    def _render_vertical(self, text: str, colophon_text: Optional[str], seal: Optional[Seal]) -> Image.Image:
+    def _render_vertical(self, text: str, colophon_text: str | None, seal: Seal | None) -> Image.Image:
         """
         【繁】渲染單幅直聯（垂直自動居中 + 視覺修正）
         [EN] Render a single vertical scroll (vertical auto-centering + visual correction)
         """
+        assert self.style is not None, "Style must be provided"
         canvas = ScrollCanvas(height=self.height, bg=self.bg_color)
         img = canvas.new_image(self.width)
         draw = ImageDraw.Draw(img)
@@ -98,10 +100,7 @@ class Couplet:
         # 3. 【繁】準備正文對象
         #    [EN] Prepare MainText object
         main = MainText(
-            text=text,
-            style=self.style,
-            brush=self.brush,
-            segment=SegmentSpec(columns_per_segment=1, segment_gap=0)
+            text=text, style=self.style, brush=self.brush, segment=SegmentSpec(columns_per_segment=1, segment_gap=0)
         )
 
         # 4. 【繁】計算水平居中 X
@@ -120,7 +119,7 @@ class Couplet:
         #    [EN] Draw main text
         # 【繁】注意：content_height 參數在 draw 裡主要用於切分列。因為我們已經強制單列且手動計算了 Y，這裡傳入剩餘高度即可
         # [EN] Note: content_height in draw is mainly used for column splitting. Since we forced a single column and manually calculated Y, passing remaining height is fine
-        final_x_main = main.draw(img, draw, x_start_main, y_start_main, self.height)
+        main.draw(img, draw, x_start_main, y_start_main, self.height)
 
         # 6. 【繁】處理落款
         #    [EN] Handle colophon
@@ -140,13 +139,9 @@ class Couplet:
                 font_size=int(self.style.font_size * 0.5),
                 color=self.style.color,
                 char_spacing=int(self.style.char_spacing * 0.5),
-                col_spacing=self.style.col_spacing
+                col_spacing=self.style.col_spacing,
             )
-            colophon_obj = Colophon(
-                signature=colophon_text,
-                style=sig_style,
-                brush=self.brush
-            )
+            colophon_obj = Colophon(signature=colophon_text, style=sig_style, brush=self.brush)
 
             gap = int(self.style.font_size * 0.8)
             x_col = visual_left_edge - gap
@@ -157,7 +152,7 @@ class Couplet:
             # [EN] Align the first char of colophon roughly with the second char of main text, appearing humble
             y_col = y_start_main + self.style.font_size * 1.5
 
-            end_x_col, end_y_col = colophon_obj.draw(draw, x_col, y_col)
+            end_x_col, end_y_col = colophon_obj.draw(draw, int(x_col), int(y_col))
 
             if seal:
                 seal_x = end_x_col - (seal.size - sig_style.font_size) // 2
@@ -168,7 +163,7 @@ class Couplet:
 
         return img
 
-    def _render_header(self) -> Optional[Image.Image]:
+    def _render_header(self) -> Image.Image | None:
         """
         【繁】渲染橫批（視覺垂直居中）
         [EN] Render header (visual vertical centering)
@@ -178,6 +173,7 @@ class Couplet:
 
         w = self.header_width if self.header_width else int(self.width * 2.5)
         h = self.header_height
+        assert self.style is not None, "Style must be provided"
         canvas = ScrollCanvas(height=h, bg=self.bg_color)
         img = canvas.new_image(w)
         draw = ImageDraw.Draw(img)
@@ -193,7 +189,7 @@ class Couplet:
             text=self.text_header,
             style=self.style,
             brush=self.brush,
-            segment=SegmentSpec(columns_per_segment=1, segment_gap=0)
+            segment=SegmentSpec(columns_per_segment=1, segment_gap=0),
         )
 
         cols = main._columns(one_char_h)
@@ -212,40 +208,40 @@ class Couplet:
 
         return img
 
-    def render(self) -> Tuple[Image.Image, Image.Image, Optional[Image.Image]]:
+    def render(self) -> tuple[Image.Image, Image.Image, Image.Image | None]:
         img_right = self._render_vertical(self.text_right, self.colophon_right, self.seal_right)
         img_left = self._render_vertical(self.text_left, self.colophon_left, self.seal_left)
         img_header = self._render_header()
         return img_right, img_left, img_header
 
     def save(self, prefix: str) -> None:
-        r, l, h = self.render()
-        r.save(f"{prefix}_right.png")
-        l.save(f"{prefix}_left.png")
-        if h:
-            h.save(f"{prefix}_header.png")
+        img_right, img_left, img_header = self.render()
+        img_right.save(f"{prefix}_right.png")
+        img_left.save(f"{prefix}_left.png")
+        if img_header:
+            img_header.save(f"{prefix}_header.png")
 
     def save_preview(self, path: str, gap: int = 50) -> None:
-        r, l, h = self.render()
-        w_total = r.width + l.width + gap * 4
-        if h:
-            w_total = max(w_total, h.width + gap * 2)
-        h_header = h.height if h else 0
-        h_total = h_header + gap + max(r.height, l.height) + gap
+        img_right, img_left, img_header = self.render()
+        w_total = img_right.width + img_left.width + gap * 4
+        if img_header:
+            w_total = max(w_total, img_header.width + gap * 2)
+        h_header_val = img_header.height if img_header else 0
+        h_total = h_header_val + gap + max(img_right.height, img_left.height) + gap
 
         preview = Image.new("RGB", (w_total, h_total), (255, 255, 255))
         current_y = gap
-        if h:
-            x_h = (w_total - h.width) // 2
-            preview.paste(h, (x_h, current_y))
-            current_y += h.height + gap
+        if img_header:
+            x_h = (w_total - img_header.width) // 2
+            preview.paste(img_header, (x_h, current_y))
+            current_y += img_header.height + gap
 
-        pair_w = l.width + gap + r.width
+        pair_w = img_left.width + gap + img_right.width
         x_start = (w_total - pair_w) // 2
 
         # 【繁】左側放左聯（下聯），右側放右聯（上聯），符合展示習慣
         # [EN] Place left scroll (bottom couplet) on the left, right scroll (top couplet) on the right, matching display convention
-        preview.paste(l, (x_start, current_y))
-        preview.paste(r, (x_start + l.width + gap, current_y))
+        preview.paste(img_left, (x_start, current_y))
+        preview.paste(img_right, (x_start + img_left.width + gap, current_y))
 
         preview.save(path)

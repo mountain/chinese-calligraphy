@@ -5,19 +5,17 @@
 
 from __future__ import annotations
 
-from typing import Tuple
-
 # =========================
 # 【基本幾何型別 / Basic geometry types】
 # =========================
 
 # 【繁】RGB 顏色（0~255）
 # [EN] RGB color (0~255)
-Color = Tuple[int, int, int]
+Color = tuple[int, int, int]
 
 # 【繁】整數像素座標點 (x, y)
 # [EN] Integer pixel coordinate point (x, y)
-Point = Tuple[int, int]
+Point = tuple[int, int]
 
 
 # =========================
@@ -37,4 +35,4 @@ Point = Tuple[int, int]
 # - base_scale：等比縮放
 # - base_anis_y：y 方向非等比伸縮（>1 拉長，<1 壓扁）
 # - amp_*：對應參數的隨機擾動幅度
-VariantTemplate = Tuple[float, float, float, float, float, float, float, float]
+VariantTemplate = tuple[float, float, float, float, float, float, float, float]

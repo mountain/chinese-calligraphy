@@ -7,9 +7,9 @@ from __future__ import annotations
 
 import os
 import sys
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from functools import lru_cache
-from typing import Iterable, List, Optional, Sequence, Tuple
 
 FONT_EXTS = (".ttf", ".otf", ".ttc", ".otc")
 
@@ -19,8 +19,8 @@ class FontSpec:
     # 【繁】字體規格：以名稱（family/name）為主，可選權重/風格作為提示
     # [EN] Font spec: family/name primarily, optional weight/style hints
     name: str
-    weight: Optional[str] = None   # e.g. "Regular", "Bold"
-    style: Optional[str] = None    # e.g. "Italic"
+    weight: str | None = None  # e.g. "Regular", "Bold"
+    style: str | None = None  # e.g. "Italic"
 
 
 def _norm(s: str) -> str:
@@ -29,10 +29,10 @@ def _norm(s: str) -> str:
     return "".join(ch for ch in s.lower() if ch not in " -_")
 
 
-def _platform_font_dirs() -> List[str]:
+def _platform_font_dirs() -> list[str]:
     # 【繁】常見系統字體目錄
     # [EN] Common system font directories
-    dirs: List[str] = []
+    dirs: list[str] = []
 
     if sys.platform == "darwin":
         # macOS
@@ -59,7 +59,7 @@ def _platform_font_dirs() -> List[str]:
         ]
 
     # 去重且只保留存在的目录
-    out: List[str] = []
+    out: list[str] = []
     seen = set()
     for d in dirs:
         if d and d not in seen and os.path.isdir(d):
@@ -131,13 +131,13 @@ def _try_fonttools_match(path: str, target: str) -> int:
 
 
 @lru_cache(maxsize=256)
-def find_font_path(font_name: str, extra_dirs: Tuple[str, ...] = ()) -> Optional[str]:
+def find_font_path(font_name: str, extra_dirs: tuple[str, ...] = ()) -> str | None:
     """
     【繁】按字體名字尋找字體檔案路徑；找不到返回 None。
     [EN] Find a font file path by font name; return None if not found.
     """
     dirs = list(_platform_font_dirs()) + [d for d in extra_dirs if os.path.isdir(d)]
-    best: Tuple[int, str] = (0, "")
+    best: tuple[int, str] = (0, "")
 
     for path in _iter_font_files(dirs):
         s1 = _filename_score(path, font_name)

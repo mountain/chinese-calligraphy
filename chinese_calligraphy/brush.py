@@ -5,10 +5,9 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple
-
 import random
+from dataclasses import dataclass, field
+
 from PIL import Image, ImageDraw, ImageFont
 
 from .types import Color, Point, VariantTemplate
@@ -20,71 +19,73 @@ class Brush:
     # =========================
     # 【隨機性 / Randomness】
     # =========================
-    seed: Optional[int] = None
+    seed: int | None = None
 
     # =========================
     # 【高頻字級抖動 / High-frequency char jitter】
     # =========================
-    char_jitter: Tuple[int, int] = (0, 0)  # (jx, jy)
+    char_jitter: tuple[int, int] = (0, 0)  # (jx, jy)
 
     # =========================
     # 【段級漂移 / Segment drift】
     # =========================
-    segment_drift: Tuple[int, int] = (0, 0)  # (sx, sy)
+    segment_drift: tuple[int, int] = (0, 0)  # (sx, sy)
 
     # =========================
     # 【列級慣性漂移 / Column inertial drift (random walk)】
     # =========================
-    col_drift_step: Tuple[int, int] = (0, 0)     # per-column step range (sx, sy)
-    col_drift_max: Tuple[int, int] = (0, 0)      # clamp max drift (mx, my)
-    col_drift_damping: float = 0.85              # damping < 1.0
+    col_drift_step: tuple[int, int] = (0, 0)  # per-column step range (sx, sy)
+    col_drift_max: tuple[int, int] = (0, 0)  # clamp max drift (mx, my)
+    col_drift_damping: float = 0.85  # damping < 1.0
 
     # =========================
     # 【一般字微變異 / General glyph micro-variation】
     # =========================
-    var_rotate_deg: float = 0.0   # ± degrees
-    var_shear_x: float = 0.0      # ± shear coefficient (x)
-    var_scale: float = 0.0        # ± relative scale, e.g. 0.03 => [0.97, 1.03]
+    var_rotate_deg: float = 0.0  # ± degrees
+    var_shear_x: float = 0.0  # ± shear coefficient (x)
+    var_scale: float = 0.0  # ± relative scale, e.g. 0.03 => [0.97, 1.03]
 
     # =========================
     # 【「之」三態概率模型 / 3-state model for '之'】
     # =========================
-    zhi_state_probs: Tuple[float, float, float] = (0.34, 0.40, 0.26)  # (stable, flow, vertical)
+    zhi_state_probs: tuple[float, float, float] = (0.34, 0.40, 0.26)  # (stable, flow, vertical)
     zhi_segment_stickiness: float = 0.10  # 0~1 (higher => more sticky)
-    zhi_pos_weight: float = 0.24          # 0~0.5 recommended
-    zhi_mirror_prob: float = 0.68         # flip sign of rot/shear with this prob
+    zhi_pos_weight: float = 0.24  # 0~0.5 recommended
+    zhi_mirror_prob: float = 0.68  # flip sign of rot/shear with this prob
 
     # 「之」模板庫 / Template banks for '之'
-    zhi_templates: Dict[str, List[VariantTemplate]] = field(default_factory=lambda: {
-        "stable": [
-            # base_rot, base_shear, base_scale, base_anis_y, amp_rot, amp_shear, amp_scale, amp_anis_y
-            (0.0,  0.00, 1.00, 1.00,  0.9, 0.025, 0.020, 0.030),
-            (0.3, -0.02, 0.99, 0.97,  1.0, 0.030, 0.020, 0.035),
-            (-0.4, 0.03, 1.01, 0.95,  1.1, 0.030, 0.020, 0.040),
-            (0.1,  0.01, 0.98, 1.03,  1.0, 0.025, 0.025, 0.040),
-        ],
-        "flow": [
-            (-0.6,  0.06, 1.02, 1.02,  1.6, 0.060, 0.030, 0.050),
-            (0.7,  -0.06, 0.99, 0.98,  1.7, 0.060, 0.030, 0.055),
-            (-0.4,  0.05, 1.04, 0.96,  1.4, 0.055, 0.035, 0.050),
-            (0.5,  -0.05, 0.97, 1.05,  1.5, 0.055, 0.035, 0.055),
-            (0.3,   0.04, 1.01, 1.00,  1.4, 0.055, 0.030, 0.050),
-        ],
-        "vertical": [
-            (-0.6,  0.05, 1.00, 1.10,  1.3, 0.040, 0.025, 0.060),
-            (0.7,  -0.06, 0.98, 1.14,  1.4, 0.045, 0.025, 0.070),
-            (0.1,   0.02, 1.01, 1.18,  1.1, 0.035, 0.020, 0.080),
-            (-0.3,  0.03, 0.99, 1.22,  1.2, 0.040, 0.020, 0.085),
-            (0.4,  -0.02, 1.02, 1.12,  1.2, 0.035, 0.025, 0.070),
-        ],
-    })
+    zhi_templates: dict[str, list[VariantTemplate]] = field(
+        default_factory=lambda: {
+            "stable": [
+                # base_rot, base_shear, base_scale, base_anis_y, amp_rot, amp_shear, amp_scale, amp_anis_y
+                (0.0, 0.00, 1.00, 1.00, 0.9, 0.025, 0.020, 0.030),
+                (0.3, -0.02, 0.99, 0.97, 1.0, 0.030, 0.020, 0.035),
+                (-0.4, 0.03, 1.01, 0.95, 1.1, 0.030, 0.020, 0.040),
+                (0.1, 0.01, 0.98, 1.03, 1.0, 0.025, 0.025, 0.040),
+            ],
+            "flow": [
+                (-0.6, 0.06, 1.02, 1.02, 1.6, 0.060, 0.030, 0.050),
+                (0.7, -0.06, 0.99, 0.98, 1.7, 0.060, 0.030, 0.055),
+                (-0.4, 0.05, 1.04, 0.96, 1.4, 0.055, 0.035, 0.050),
+                (0.5, -0.05, 0.97, 1.05, 1.5, 0.055, 0.035, 0.055),
+                (0.3, 0.04, 1.01, 1.00, 1.4, 0.055, 0.030, 0.050),
+            ],
+            "vertical": [
+                (-0.6, 0.05, 1.00, 1.10, 1.3, 0.040, 0.025, 0.060),
+                (0.7, -0.06, 0.98, 1.14, 1.4, 0.045, 0.025, 0.070),
+                (0.1, 0.02, 1.01, 1.18, 1.1, 0.035, 0.020, 0.080),
+                (-0.3, 0.03, 0.99, 1.22, 1.2, 0.040, 0.020, 0.085),
+                (0.4, -0.02, 1.02, 1.12, 1.2, 0.035, 0.025, 0.070),
+            ],
+        }
+    )
 
     # 段內緩存：段內家族相 / Per-segment cache: family resemblance within segment
-    _zhi_cache: Dict[int, Tuple[str, int]] = field(default_factory=dict)  # seg_idx -> (state, template_idx)
+    _zhi_cache: dict[int, tuple[str, int]] = field(default_factory=dict)  # seg_idx -> (state, template_idx)
 
     # 段內統計：shear 去偏 / Per-segment stats for shear de-bias
-    _zhi_seg_shear_sum: Dict[int, float] = field(default_factory=dict)
-    _zhi_seg_shear_cnt: Dict[int, int] = field(default_factory=dict)
+    _zhi_seg_shear_sum: dict[int, float] = field(default_factory=dict)
+    _zhi_seg_shear_cnt: dict[int, int] = field(default_factory=dict)
 
     # =========================
     # 【隨機源 / RNG】
@@ -98,7 +99,7 @@ class Brush:
     # 【基本抖動 / Basic jitter】
     # =========================
     @staticmethod
-    def _jitter_point(p: Point, r: random.Random, j: Tuple[int, int]) -> Point:
+    def _jitter_point(p: Point, r: random.Random, j: tuple[int, int]) -> Point:
         jx, jy = j
         if jx == 0 and jy == 0:
             return p
@@ -112,7 +113,7 @@ class Brush:
     # =========================
     # 【段級 / Segment drift】
     # =========================
-    def begin_segment(self, r: random.Random) -> Tuple[int, int]:
+    def begin_segment(self, r: random.Random) -> tuple[int, int]:
         # 【繁】段起：抽取段級偏移
         # [EN] Segment start: sample segment-level drift
         sx = r.randint(-self.segment_drift[0], self.segment_drift[0]) if self.segment_drift[0] else 0
@@ -122,12 +123,12 @@ class Brush:
     # =========================
     # 【列級慣性 / Column inertial drift】
     # =========================
-    def init_col_state(self) -> Tuple[float, float]:
+    def init_col_state(self) -> tuple[float, float]:
         # 【繁】列漂移狀態初始化
         # [EN] Initialize column drift state
         return (0.0, 0.0)
 
-    def step_col_state(self, r: random.Random, state: Tuple[float, float]) -> Tuple[float, float]:
+    def step_col_state(self, r: random.Random, state: tuple[float, float]) -> tuple[float, float]:
         # 【繁】列級 random walk + 阻尼 + 截斷
         # [EN] Column random-walk with damping and clamping
         dx, dy = state
@@ -157,12 +158,12 @@ class Brush:
         self,
         r: random.Random,
         ch: str,
-        prev_ch: Optional[str],
-        next_ch: Optional[str],
+        prev_ch: str | None,
+        next_ch: str | None,
         seg_idx: int,
         col_idx: int,
         row_idx: int,
-    ) -> Tuple[float, float, float]:
+    ) -> tuple[float, float, float]:
         # 【繁】依上下文生成微變異參數：rot / shear_x / scale
         # [EN] Contextual micro-variation params: rot / shear_x / scale
 
@@ -198,7 +199,7 @@ class Brush:
     # =========================
     # 【「之」三態 / 3-state model for '之'】
     # =========================
-    def _weighted_choice3(self, r: random.Random, probs: Tuple[float, float, float]) -> int:
+    def _weighted_choice3(self, r: random.Random, probs: tuple[float, float, float]) -> int:
         # 【繁】按概率選 0/1/2
         # [EN] Weighted choice among 0/1/2
         x = r.random()
@@ -209,7 +210,7 @@ class Brush:
             return 1
         return 2
 
-    def _state_probs_with_position(self, col_pos_ratio: float) -> Tuple[float, float, float]:
+    def _state_probs_with_position(self, col_pos_ratio: float) -> tuple[float, float, float]:
         """
         col_pos_ratio: 0 at segment start, 1 at segment end
         """
@@ -229,7 +230,7 @@ class Brush:
         z = s2 + f2 + v2
         return (s2 / z, f2 / z, v2 / z)
 
-    def pick_zhi_variant(self, r: random.Random, seg_idx: int, col_pos_ratio: float) -> Tuple[str, VariantTemplate]:
+    def pick_zhi_variant(self, r: random.Random, seg_idx: int, col_pos_ratio: float) -> tuple[str, VariantTemplate]:
         # 【繁】先選態，再選模板；段內可黏性（stickiness）
         # [EN] Pick state then template, optionally sticky within segment
         if (seg_idx in self._zhi_cache) and (r.random() < self.zhi_segment_stickiness):
@@ -244,7 +245,7 @@ class Brush:
         tpl = self.zhi_templates[state][tidx]
         return state, tpl
 
-    def sample_from_template(self, r: random.Random, tpl: VariantTemplate) -> Tuple[float, float, float, float]:
+    def sample_from_template(self, r: random.Random, tpl: VariantTemplate) -> tuple[float, float, float, float]:
         # 【繁】模板基準 + 連續擾動（幅度由模板指定）
         # [EN] Template base + continuous noise (amplitudes from template)
         base_rot, base_shear, base_scale, base_anis, amp_rot, amp_sh, amp_sc, amp_an = tpl
@@ -258,7 +259,7 @@ class Brush:
 
         return rot, shear_x, scale, anis_y
 
-    def balance_zhi_params(self, r: random.Random, seg_idx: int, rot: float, shear_x: float) -> Tuple[float, float]:
+    def balance_zhi_params(self, r: random.Random, seg_idx: int, rot: float, shear_x: float) -> tuple[float, float]:
         # 【繁】鏡像 + 段內 shear 去偏（讓均值趨近 0）
         # [EN] Mirroring + per-segment shear de-bias (keep mean near 0)
 
@@ -319,9 +320,9 @@ class Brush:
             d, e, f = 0.0, 1.0, 0.0
             patch = patch.transform(
                 patch.size,
-                Image.AFFINE,
+                Image.Transform.AFFINE,
                 (a, b, c, d, e, f),
-                resample=Image.BICUBIC,
+                resample=Image.Resampling.BICUBIC,
             )
 
         # 4) scale + anis_y
@@ -330,14 +331,14 @@ class Brush:
             sy = scale * anis_y
             nw = max(1, int(round(w * sx)))
             nh = max(1, int(round(h * sy)))
-            scaled = patch.resize((nw, nh), resample=Image.BICUBIC)
+            scaled = patch.resize((nw, nh), resample=Image.Resampling.BICUBIC)
             patch2 = Image.new("RGBA", (w, h), (0, 0, 0, 0))
             patch2.paste(scaled, ((w - nw) // 2, (h - nh) // 2), scaled)
             patch = patch2
 
         # 5) rotate
         if rot != 0.0:
-            patch = patch.rotate(rot, resample=Image.BICUBIC, expand=False)
+            patch = patch.rotate(rot, resample=Image.Resampling.BICUBIC, expand=False)
 
         # 6) final jitter at placement
         p2 = self._jitter_point(p, r, self.char_jitter)

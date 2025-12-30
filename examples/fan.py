@@ -4,13 +4,13 @@ import os
 import sys
 
 # 確保能導入本地模組
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from chinese_calligraphy import Style, Brush, Fan
+from chinese_calligraphy import Brush, Fan, Style
 from chinese_calligraphy.font import require_font_path
 
 
-def main():
+def main() -> None:
     font_path = require_font_path("FZWangDXCJF")
 
     # 王維《鳥鳴澗》
@@ -27,15 +27,10 @@ def main():
         font_size=120,  # 正文大字
         color=(20, 20, 20),
         char_spacing=10,
-        col_spacing=240  # 這裡會轉化為角度
+        col_spacing=240,  # 這裡會轉化為角度
     )
 
-    brush = Brush(
-        seed=2025,
-        char_jitter=(2, 2),
-        var_rotate_deg=1.2,
-        var_scale=0.06
-    )
+    brush = Brush(seed=2025, char_jitter=(2, 2), var_rotate_deg=1.2, var_scale=0.06)
 
     # 創建扇面
     fan_work = Fan(
@@ -46,7 +41,7 @@ def main():
         # 參數已在類中優化，使用默認即可，或微調：
         width=2400,
         height=1400,
-        angle_span=130
+        angle_span=130,
     )
 
     print("Generating corrected fan calligraphy (with proper colophon)...")

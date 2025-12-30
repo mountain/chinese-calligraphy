@@ -3,15 +3,15 @@
 from __future__ import annotations
 
 import math
+import random
 from dataclasses import dataclass, field
-from typing import List, Optional
 
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont
 
-from ..types import Color
-from ..style import Style
 from ..brush import Brush
-from ..utils import strip_newlines, chunk
+from ..style import Style
+from ..types import Color
+from ..utils import chunk, strip_newlines
 
 
 @dataclass
@@ -20,11 +20,12 @@ class Fan:
     【繁】折扇扇面：輻射狀排版，支持正文與落款不同字號
     [EN] Folding fan layout: Radial text arrangement, supporting distinct main text and colophon styles
     """
-    text: str  # 正文
-    colophon: Optional[str] = None  # 落款
 
-    style: Optional[Style] = None  # 正文样式
-    colophon_style: Optional[Style] = None  # 落款样式 (若無則自動生成)
+    text: str  # 正文
+    colophon: str | None = None  # 落款
+
+    style: Style | None = None  # 正文样式
+    colophon_style: Style | None = None  # 落款样式 (若無則自動生成)
 
     brush: Brush = field(default_factory=Brush)
 
@@ -46,7 +47,7 @@ class Fan:
 
     bg_color: Color = (235, 215, 170)  # 泥金/灑金紙色
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.style is None:
             raise ValueError("Fan.style must be provided")
 
@@ -58,10 +59,10 @@ class Fan:
                 font_size=small_size,
                 color=(60, 60, 60),  # 落款墨色可稍淡，或同色
                 char_spacing=int(self.style.char_spacing * 0.6),
-                col_spacing=int(self.style.col_spacing * 0.6)
+                col_spacing=int(self.style.col_spacing * 0.6),
             )
 
-    def _get_columns(self, text: str, style: Style, content_height_ratio: float = 1.0) -> List[str]:
+    def _get_columns(self, text: str, style: Style, content_height_ratio: float = 1.0) -> list[str]:
         # content_height_ratio: 落款通常不寫滿到底，只寫約 80% 高度
         available_height = self.radius_outer - self.radius_inner
         margin = style.font_size
@@ -74,6 +75,7 @@ class Fan:
         return chunk(clean_text, cpc)
 
     def render(self) -> Image.Image:
+        assert self.style is not None, "Fan.style must be provided"
         img = Image.new("RGB", (self.width, self.height), (255, 255, 255))
         draw = ImageDraw.Draw(img)
 
@@ -84,15 +86,19 @@ class Fan:
 
         # 外弧 (Gold)
         bbox_outer = [
-            self.center_x - self.radius_outer, self.center_y - self.radius_outer,
-            self.center_x + self.radius_outer, self.center_y + self.radius_outer
+            self.center_x - self.radius_outer,
+            self.center_y - self.radius_outer,
+            self.center_x + self.radius_outer,
+            self.center_y + self.radius_outer,
         ]
         draw.pieslice(bbox_outer, start=pil_start, end=pil_end, fill=self.bg_color)
 
         # 內弧 (White mask) - 模擬扇骨鏤空區
         bbox_inner = [
-            self.center_x - self.radius_inner, self.center_y - self.radius_inner,
-            self.center_x + self.radius_inner, self.center_y + self.radius_inner
+            self.center_x - self.radius_inner,
+            self.center_y - self.radius_inner,
+            self.center_x + self.radius_inner,
+            self.center_y + self.radius_inner,
         ]
         draw.pieslice(bbox_inner, start=pil_start - 1, end=pil_end + 1, fill=(255, 255, 255))
 
@@ -109,7 +115,7 @@ class Fan:
         # 角度計算：theta = ArcLength / Radius
         r_mid = (self.radius_outer + self.radius_inner) / 2
 
-        def get_angle_step(s: Style):
+        def get_angle_step(s: Style) -> float:
             return math.degrees(s.col_spacing / r_mid)
 
         step_main = get_angle_step(self.style)
@@ -119,16 +125,12 @@ class Fan:
         # 間距：通常空一個正文列寬
         gap_angle = step_main * 1.5 if col_cols else 0
 
-        total_angle = (
-                (len(main_cols) * step_main) +
-                gap_angle +
-                (len(col_cols) * step_col)
-        )
+        total_angle = (len(main_cols) * step_main) + gap_angle + (len(col_cols) * step_col)
 
         # --- 3. 繪製循環 ---
         # 起始角度：居中
         # 扇面右側為負角度，左側為正角度 (0度為正上方)
-        current_angle = - (total_angle / 2)
+        current_angle = -(total_angle / 2)
 
         # 為了視覺平衡，先加上半個列寬，讓整體塊居中
         current_angle += step_main / 2
@@ -138,23 +140,36 @@ class Fan:
         rng = self.brush.rng()
 
         # 3.1 繪製正文
-        for col_idx, col_text in enumerate(main_cols):
+        for _col_idx, col_text in enumerate(main_cols):
             self._draw_column(img, draw, col_text, current_angle, self.style, font_main, rng, is_colophon=False)
             current_angle += step_main
 
         # 3.2 繪製落款
         if col_cols:
-            current_angle += (gap_angle - step_main / 2 - step_col / 2)  # 調整間距補償
+            assert self.colophon_style is not None
+            current_angle += gap_angle - step_main / 2 - step_col / 2  # 調整間距補償
 
-            for col_idx, col_text in enumerate(col_cols):
+            for _col_idx, col_text in enumerate(col_cols):
                 # 落款通常稍微低一點開始 (天頭留白更多)
-                self._draw_column(img, draw, col_text, current_angle, self.colophon_style, font_col, rng,
-                                  is_colophon=True)
+                self._draw_column(
+                    img, draw, col_text, current_angle, self.colophon_style, font_col, rng, is_colophon=True
+                )
                 current_angle += step_col
 
         return img
 
-    def _draw_column(self, img, draw, text, angle_deg, style, font, rng, is_colophon):
+    def _draw_column(
+        self,
+        img: Image.Image,
+        draw: ImageDraw.ImageDraw,
+        text: str,
+        angle_deg: float,
+        style: Style,
+        font: ImageFont.FreeTypeFont | None,
+        rng: random.Random,
+        is_colophon: bool,
+    ) -> None:
+        assert font is not None, "Font must be provided"
         # 計算列的起始半徑
         # 正文：緊貼上邊緣；落款：稍微下沈
         top_margin = style.font_size * 0.8
@@ -176,9 +191,7 @@ class Fan:
             base_rot = -angle_deg
 
             # 筆觸變形
-            rot_jit, shear, scale = self.brush.glyph_transform_params(
-                rng, ch, None, None, 0, 0, row_idx
-            )
+            rot_jit, shear, scale = self.brush.glyph_transform_params(rng, ch, None, None, 0, 0, row_idx)
 
             self.brush.draw_char(
                 base_img=img,
@@ -190,7 +203,7 @@ class Fan:
                 r=rng,
                 rot=base_rot + rot_jit,
                 shear_x=shear,
-                scale=scale
+                scale=scale,
             )
 
             current_r -= style.step_y
