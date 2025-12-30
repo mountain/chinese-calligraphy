@@ -13,13 +13,14 @@ def get_any_font(candidates: list[str]) -> str:
             return p
     raise FileNotFoundError("No suitable font found for verification.")
 
+
 def main() -> None:
     # Try generic fonts if project specific ones are missing
     font_path = get_any_font(["FZWangDXCJF", "STSong", "Songti", "PingFang SC", "Arial"])
 
     # Setup canvas
     w, h = 1500, 400
-    img = Image.new("RGB", (w, h), (245, 240, 230)) # Paper color
+    img = Image.new("RGB", (w, h), (245, 240, 230))  # Paper color
     draw = ImageDraw.Draw(img)
 
     # Test text: repeated character to see effect clearly
@@ -39,12 +40,7 @@ def main() -> None:
 
     for i, dry in enumerate(dryness_levels):
         # Create style with specific dryness
-        style = Style(
-            font_path=font_path,
-            font_size=font_size,
-            color=(30, 30, 30),
-            ink_dryness=dry
-        )
+        style = Style(font_path=font_path, font_size=font_size, color=(30, 30, 30), ink_dryness=dry)
 
         font = style.font()
 
@@ -70,12 +66,13 @@ def main() -> None:
             rot=rot,
             shear_x=shear,
             scale=scale,
-            ink_dryness=dry # Passing the explicit dryness
+            ink_dryness=dry,  # Passing the explicit dryness
         )
 
     output_path = "living_ink.png"
     img.save(output_path)
     print(f"Saved verification image to {output_path}")
+
 
 if __name__ == "__main__":
     main()

@@ -108,7 +108,6 @@ class NoiseGenerator:
         if curr_w > width:
             high_res = high_res[:, :width]
 
-
         # If padded is needed (unlikely with ceil logic), we'd do it here.
         # But for robustness, let's just resize exactly to target if mismatch occurs
         if high_res.shape != (height, width):
