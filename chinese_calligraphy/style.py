@@ -30,7 +30,7 @@ class Style:
     # [EN] Vertical layout: inter-column spacing (x)
     col_spacing: int = 160
 
-    # 【繁】墨韻：干枯度 (0.0=濕潤, 1.0=極度飛白)
+    # 【繁】墨韻：干枯度 (0.0=濕潤, 0.10=極度飛白)
     # [EN] Ink style: dryness (0.0=wet, 1.0=extreme flying white)
     ink_dryness: float = 0.01
 
