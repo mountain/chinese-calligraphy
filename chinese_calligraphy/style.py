@@ -26,7 +26,17 @@ class Style:
 
     # 【繁】竪排：列與列之間（x）
     # [EN] Vertical layout: inter-column spacing (x)
+    # 【繁】竪排：列與列之間（x）
+    # [EN] Vertical layout: inter-column spacing (x)
     col_spacing: int = 160
+
+    # 【繁】墨韻：干枯度 (0.0=濕潤, 1.0=極度飛白)
+    # [EN] Ink style: dryness (0.0=wet, 1.0=extreme flying white)
+    ink_dryness: float = 0.01
+
+    # 【繁】墨韻：暈染 (0.0=無, >0.1=邊緣模糊)
+    # [EN] Ink style: diffusion/blur (halo effect)
+    blur_sigma: float = 0.15
 
     def font(self) -> ImageFont.FreeTypeFont:
         # 【繁】載入字體（TrueType/OpenType）

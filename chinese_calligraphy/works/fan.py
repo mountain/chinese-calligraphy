@@ -204,6 +204,8 @@ class Fan:
                 rot=base_rot + rot_jit,
                 shear_x=shear,
                 scale=scale,
+                ink_dryness=style.ink_dryness,
+                blur_sigma=style.blur_sigma,
             )
 
             current_r -= style.step_y

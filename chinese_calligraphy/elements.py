@@ -193,6 +193,8 @@ class MainText:
                         shear_x=shear_x,
                         scale=scale,
                         anis_y=anis_y,
+                        ink_dryness=self.style.ink_dryness,
+                        blur_sigma=self.style.blur_sigma,
                     )
 
                     y += self.style.step_y

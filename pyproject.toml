@@ -31,6 +31,8 @@ classifiers = [
 ]
 dependencies = [
   "Pillow>=10.0.0",
+  "numpy>=1.20.0",
+  "scipy>=1.10.0",
 ]
 
 
@@ -42,6 +44,7 @@ Issues = "https://github.com/mountain/chinese-calligraphy/issues"
 
 [tool.hatch.build.targets.sdist]
 # Include everything by default (README, LICENSE, images, examples)
+exclude = ["docs", "projects"]
 
 [tool.hatch.build.targets.wheel]
 # Include only the package itself in the wheel; exclude dev assets
@@ -53,6 +56,8 @@ exclude = [
   "fonts.txt",
   "handscroll.png",
   "handscroll_small.png",
+  "docs",
+  "projects",
 ]
 
 [tool.ruff]
