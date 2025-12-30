@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
-from scipy import ndimage
+from scipy import ndimage  # type: ignore
 
 from .types import Color, Point, VariantTemplate
 from .utils import NoiseGenerator, clamp_int
@@ -325,18 +325,18 @@ class Brush:
         h = fs * 2 + pad * 2
 
         # 2) High-res rasterization (2x super-sampling for better morphology)
-        super_scale = 2
-        sw, sh = w * super_scale, h * super_scale
-        
+        # super_scale = 2 - unused
+        # sw, sh = w * super_scale, h * super_scale - unused
+
         # Draw white text on black background for mask processing
-        mask_img = Image.new("L", (sw, sh), 0)
-        md = ImageDraw.Draw(mask_img)
-        
+        # mask_img = Image.new("L", (sw, sh), 0) - unused
+        # md = ImageDraw.Draw(mask_img) - unused
+
         # Centered drawing
-        cx, cy = sw // 2, sh // 2
+        # cx, cy = sw // 2, sh // 2 - unused
         # Use larger font for super-sampling
         # Note: loading font repeatedly is slow, so we scale the font object if possible
-        # Or just scale the coordinate system if font is vector. 
+        # Or just scale the coordinate system if font is vector.
         # PIL font size change requires reloading.
         # Efficient hack: draw at normal size then scale up? No, jagged edges.
         # Better: just use font.font_variant(size=fs*super_scale) if possible?
@@ -344,27 +344,27 @@ class Brush:
         # For performance/simplicity in this step, let's try to just load the larger font
         # if readily available, OR just draw at normal size and scale up (blurrier but acceptable for ink).
         # Let's try drawing at normal size * super_scale?
-        # Actually, let's stick to 1x rasterization if font reloading is expensive, 
+        # Actually, let's stick to 1x rasterization if font reloading is expensive,
         # but 2x is much better for erosion quality.
         # To avoid IO, we might just scale the vectors. but PIL doesn't expose that easily.
-        # We will fallback to 1x raster for now to be safe on perf, 
+        # We will fallback to 1x raster for now to be safe on perf,
         # but use a larger canvas.
-        
+
         # WAIT: font object is passed in. Cloning it with new size implies IO.
         # Let's trust the user passed a sizeable font or accept 1x resolution.
         # For "Living Ink", texture detail > sharp vector edges.
         # So we draw at 1x, then upsample if needed for noise interaction?
         # Or just work at 1x.
         # Let's stick to working at provided resolution `fs` but on a padded canvas.
-        
+
         mask_img_1x = Image.new("L", (w, h), 0)
         md_1x = ImageDraw.Draw(mask_img_1x)
         md_1x.text((w // 2 - fs // 2, h // 2 - fs // 2), ch, font=font, fill=255)
-        
+
         # 3) Apply geometric transforms (Shear / Scale / Rotate) on the MASK
         #    This is generic PIL stuff.
         patch = mask_img_1x
-        
+
         # Shear
         if shear_x != 0.0:
             a, b, c = 1.0, shear_x, 0.0
@@ -390,87 +390,87 @@ class Brush:
         # Rotate
         if rot != 0.0:
             patch = patch.rotate(rot, resample=Image.Resampling.BICUBIC, expand=False)
-            
+
         # 4) Physical Simulation (Erosion / Dryness)
         # Only apply if we have dryness > 0.0, else standard compositing
         if ink_dryness > 0.001:
             arr = np.array(patch)
-            
+
             # Generate generic noise for this patch
             # We use a deterministic seed per char based on position or just random?
             # self.rng() is generic. We can use a fresh random int for noise seed.
             param_seed = r.randint(0, 100000)
-            
+
             # High-frequency fiber noise
             fiber = self._noise_gen.generate_fiber_texture(w, h)
             # Roll it randomly to avoid repetitive patterns if generator is deterministic
             roll_x = param_seed % w
             roll_y = (param_seed // w) % h
             fiber = np.roll(fiber, (roll_y, roll_x), axis=(0, 1))
-            
+
             # Threshold for erosion: Higher dryness => easier to erode
             # We want to erode pixels where (fiber_val < threshold)
             # Or formatted: output = input AND (fiber > dryness)
-            # "Erosion" usually shrinks the shape. 
+            # "Erosion" usually shrinks the shape.
             # Digital "Dry brush" is effectively a mask based on texture.
-            
+
             # Map [0, 255] to [0.0, 1.0]
             alpha_f = arr.astype(float) / 255.0
-            
+
             # Modulate alpha by fiber noise
             # dryness 0.1 => retain 90%. dryness 0.9 => retain 10%
             # We use a sigmoid-ish contrast curve for the fiber mask
-            limit = 1.0 - (ink_dryness * 0.8) # keep at least some
-            
+            # limit = 1.0 - (ink_dryness * 0.8) # keep at least some
+
             # Mask out areas where fiber texture is "low" (valleys in paper)
             # If ink is dry, it only touches peaks (high values).
             # So we keep pixels where fiber > (dryness_threshold)
-            
+
             # Dynamic thresholding based on original alpha (so text core is preserved more than edges?)
             # Actually flying white cuts through the stroke.
-            
-            # Simple interaction model: 
+
+            # Simple interaction model:
             # Result = Original * SmoothStep(fiber, dryness, dryness + 0.2)
-            
+
             # Normalized dryness threshold
             thresh = ink_dryness * 0.7  # Scale to avoid empty characters
-            
+
             # Soft mask from noise
             mask_d = np.clip((fiber - thresh) * 5.0, 0.0, 1.0)
-            
+
             # 【繁】核心保護邏輯：計算距離變換，保護筆畫內部不被低干枯度的噪聲侵蝕
             # [EN] Core protection: use distance transform to prevent noise erosion in stroke core at low dryness
-            
+
             # 1. Calculate distance from background
             # We treat standard alpha > 0.1 as "inside"
             dist = ndimage.distance_transform_edt(alpha_f > 0.1)
-            
+
             # 2. Define protection factor
             # "Wet" ink (low dryness) flows to fill the core -> high protection
             # "Dry" ink (high dryness) allows streaks -> low protection
             # Transition: protect pixels > 1.5px from edge, fade out by 3.5px
             core_factor = np.clip((dist - 1.5) / 2.0, 0.0, 1.0)
-            
+
             # 3. Modulate protection by dryness
             # If dryness is low (e.g. 0.01), we want near 100% protection in core.
             # If dryness is high (e.g. 0.9), we want less protection (allow flying white).
             # Let's say protection decays as dryness increases.
             # solidity = core_factor * (1.0 - dryness)^k
             solidity = core_factor * (1.0 - ink_dryness * 0.8)
-            
+
             # 4. Blend noise mask with solid core
             # effective_mask = mask_d * (1 - solidity) + 1.0 * solidity
             #                = mask_d - mask_d * solidity + solidity
             effective_mask = mask_d + (1.0 - mask_d) * solidity
-            
+
             # Apply to alpha
             final_alpha = alpha_f * effective_mask
-            
+
             # Erosion on edges to make them rough?
             # We can threshold the final alpha
             final_alpha = np.clip(final_alpha * 255.0, 0, 255).astype(np.uint8)
             patch = Image.fromarray(final_alpha, mode="L")
-        
+
         # 4.5) Diffusion / Blur (Halo)
         # Apply gaussian blur if sigma > 0
         if blur_sigma > 0.01:
@@ -478,29 +478,29 @@ class Brush:
             if not isinstance(patch, np.ndarray):
                 # Recast only if we skipped the dryness block
                 # but wait, patch is PIL Image here (either from step 3 or step 4)
-                pass 
-            
+                pass
+
             # Simple way: use PIL gaussian blur or scipy
             # Scipy is better for exact float sigma control
             arr = np.array(patch)
-            
-            # Distance transform to keep core darker? 
+
+            # Distance transform to keep core darker?
             # Or just simple gaussian blur for halo.
             # Real ink diffusion keeps the center dark (carbon particles) and water spreads out (lighter).
             # Simple gaussian blurs everything.
             # Let's do a weighted blend: Original (Dark) + Blurred (Light Halo)
-            
+
             blurred = ndimage.gaussian_filter(arr.astype(float), sigma=blur_sigma)
-            
+
             # Composite: Keep original structure dominant, add blur as halo
             # halo = blurred * 0.5 ?
             # If we just replace with blurred, it looks out of focus.
             # Ink diffusion: Core is crisp-ish, edge is soft.
             # Let's try: Result = max(Original, Blurred * 0.7)
-            
+
             # But wait, we are manipulating alpha channel here (L mode).
             # So: alpha = max(alpha_orig, alpha_blur * wetness)
-            
+
             final_arr = np.maximum(arr.astype(float), blurred * 0.8)
             final_arr = np.clip(final_arr, 0, 255).astype(np.uint8)
             patch = Image.fromarray(final_arr, mode="L")
@@ -509,15 +509,15 @@ class Brush:
         # Colored patch
         final_w, final_h = patch.size
         color_patch = Image.new("RGBA", (final_w, final_h), fill + (0,))
-        
+
         # Apply mask
         color_patch.paste(fill + (255,), (0, 0), mask=patch)
-        
+
         # 6) Jitter position
         p2 = self._jitter_point(p, r, self.char_jitter)
-        
+
         # 7) Paste to base
         x = p2[0] - final_w // 2
         y = p2[1] - final_h // 2
-        
+
         base_img.paste(color_patch, (x, y), color_patch)

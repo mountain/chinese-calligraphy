@@ -6,11 +6,9 @@
 from __future__ import annotations
 
 import math
-import random
 from dataclasses import dataclass
 
 import numpy as np
-
 
 # =========================
 # 【文字預處理 / Text preprocessing】
@@ -76,38 +74,41 @@ class NoiseGenerator:
         """
         Generate a 2D Simplex-like noise grid.
         Returns a float array in [0, 1].
-        
+
         Using a simplified Value Noise approach here to avoid heavy dependencies like opensimplex.
         For ink texture, value noise with bicubic interpolation is often sufficient.
         """
         # Generate a lower-resolution grid
         grid_w = max(2, int(width * scale))
         grid_h = max(2, int(height * scale))
-        
+
         # Random independent low-res values
         low_res = self._rng.random((grid_h, grid_w))
-        
-        # Bicubic interpolation up to (height, width) would be ideal, 
+
+        # Bicubic interpolation up to (height, width) would be ideal,
         # but linear/cubic resizing via scipy or numpy is faster.
         # Here we manually implement a simple upscale for dependency minimalism if needed,
         # but since we have scipy, let's use scipy.ndimage.zoom for quality.
-        from scipy.ndimage import zoom
-        
+        from scipy.ndimage import zoom  # type: ignore
+
         zoom_y = height / grid_h
         zoom_x = width / grid_w
-        
+
         # spline order 3 = cubic
         high_res = zoom(low_res, (zoom_y, zoom_x), order=3)
-        
+
         # Clip to [0,1] as bicubic can overshoot
         high_res = np.clip(high_res, 0.0, 1.0)
-        
+
         # If zoom result size doesn't match exactly due to float rounding, crop or pad
         curr_h, curr_w = high_res.shape
         # Simple crop/pad logic
-        if curr_h > height: high_res = high_res[:height, :]
-        if curr_w > width: high_res = high_res[:, :width]
-        
+        if curr_h > height:
+            high_res = high_res[:height, :]
+        if curr_w > width:
+            high_res = high_res[:, :width]
+
+
         # If padded is needed (unlikely with ceil logic), we'd do it here.
         # But for robustness, let's just resize exactly to target if mismatch occurs
         if high_res.shape != (height, width):
@@ -116,26 +117,27 @@ class NoiseGenerator:
             # But let's just accept minimal error.
             pass
 
-        return high_res
+        # Using cast to silence mypy about 'Any' return from zoom
+        return high_res  # type: ignore
 
     def generate_fiber_texture(self, width: int, height: int) -> np.ndarray:
         """
         Generate high-frequency fiber-like noise.
         """
         # Base white noise
-        noise = self._rng.random((height, width))
-        
+        # noise = self._rng.random((height, width))
+
         # Apply strict threshold to make it sparse (fibers are threads)
-        # We want long thin structures. 
+        # We want long thin structures.
         # A simple approximation is heavily blurred noise thresholded, or just motion blur.
-        
+
         # For simplicity in this version: simple perlin-ish layers
         base = self.generate_simplex(width, height, scale=0.2)
         fine = self.generate_simplex(width, height, scale=0.8)
-        
+
         # Combine: fine noise modulated by base textur
         texture = 0.6 * base + 0.4 * fine
-        
+
         # Contrast stretch
         texture = (texture - 0.3) * 2.0
         return np.clip(texture, 0.0, 1.0)
